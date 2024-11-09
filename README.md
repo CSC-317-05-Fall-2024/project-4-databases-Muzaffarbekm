@@ -10,10 +10,10 @@ Goals for this assignment:
 
 
 
-## Time taken to complete this project: 3hrs
+## Time taken to complete this project: 
 
 ```
-# replace me!
+3hrs
 ```
 
 
