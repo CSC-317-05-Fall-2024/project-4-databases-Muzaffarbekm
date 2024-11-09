@@ -2,11 +2,26 @@
 async function fetchAndRenderRestaurants() {
     try {
         const response = await fetch('/api/restaurants');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const restaurants = await response.json();
         renderRestaurants(restaurants);
     } catch (error) {
         console.error('Error fetching restaurants:', error);
+        displayError('Failed to load restaurants. Please try again later.');
     }
+}
+
+// Function to display error messages
+function displayError(message) {
+    const main = document.querySelector('main.restaurants');
+    main.innerHTML = `
+        <div class="error-message">
+            <p>${message}</p>
+            <button onclick="fetchAndRenderRestaurants()">Try Again</button>
+        </div>
+    `;
 }
 
 // Function to render restaurants
@@ -20,16 +35,28 @@ function renderRestaurants(restaurants) {
         card.setAttribute('data-id', restaurant.id);
 
         card.innerHTML = `
-            <img src="${restaurant.photo}" alt="Restaurant Image">
-            <h3>${restaurant.name}</h3>
-            <p>${restaurant.address}</p>
-            <p>${restaurant.phone}</p>
-            <button class="delete-btn">X</button>
+            <img src="${restaurant.photo}" alt="${restaurant.name}">
+            <div class="restaurant-info">
+                <h3>${restaurant.name}</h3>
+                <p class="address">📍 ${restaurant.address}</p>
+                <p class="phone">📞 ${restaurant.phone}</p>
+            </div>
+            <button class="delete-btn" aria-label="Delete ${restaurant.name}">×</button>
         `;
 
         // Add event listener to the delete button
         const deleteBtn = card.querySelector('.delete-btn');
-        deleteBtn.addEventListener('click', () => deleteRestaurant(restaurant.id));
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent card click when clicking delete
+            if (confirm(`Are you sure you want to delete ${restaurant.name}?`)) {
+                deleteRestaurant(restaurant.id);
+            }
+        });
+
+        // Make the whole card clickable except for the delete button
+        card.addEventListener('click', () => {
+            window.location.href = `/restaurants/${restaurant.id}`;
+        });
 
         main.appendChild(card);
     });
@@ -43,13 +70,14 @@ async function deleteRestaurant(id) {
         });
 
         if (response.status === 204) {
-            // Re-fetch and re-render restaurants
-            await fetchAndRenderRestaurants();
+            // Add a small delay to account for Railway's propagation time
+            setTimeout(fetchAndRenderRestaurants, 1000);
         } else {
-            alert('Failed to delete the restaurant.');
+            throw new Error('Failed to delete restaurant');
         }
     } catch (error) {
         console.error('Error deleting restaurant:', error);
+        alert('Failed to delete the restaurant. Please try again later.');
     }
 }
 

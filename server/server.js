@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getRestaurants, getRestaurant } from './data/restaurants.js'; // Import both functions
+import { getRestaurants, getRestaurant, createRestaurant, deleteRestaurant, getReviewsForRestaurant } from './data/restaurants.js';
 import { backendRouter } from './routes/api.js';
 
 const app = express();
@@ -35,19 +35,30 @@ app.get('/attractions', (req, res) => {
 });
 
 // Serve the restaurants page
-app.get('/restaurants', (req, res) => {
-    res.render('restaurants'); // No need to pass any data
+app.get('/restaurants', async (req, res) => {
+    try {
+        const restaurants = await getRestaurants();
+        res.render('restaurants', { restaurants: restaurants });
+    } catch (error) {
+        console.error('Error fetching restaurants:', error);
+        res.render('restaurants', { restaurants: [] });
+    }
 });
 
 
 // Route for a specific restaurant by ID
-app.get('/restaurants/:id', (req, res) => {
-    const id = req.params.id;
-    const restaurant = getRestaurant(id);
-    if (restaurant) {
-        res.render('restaurant-details', restaurant); // Spread the restaurant object
-    } else {
-        res.status(404).send('Restaurant not found');
+app.get('/restaurants/:id', async (req, res) => {
+    try {
+        const restaurant = await getRestaurant(req.params.id);
+        const reviews = await getReviewsForRestaurant(req.params.id);
+        if (restaurant) {
+            res.render('restaurant-details', { restaurant, reviews });
+        } else {
+            res.status(404).render('restaurant-details', { restaurant: null, reviews: [] });
+        }
+    } catch (error) {
+        console.error('Error fetching restaurant details:', error);
+        res.status(500).render('restaurant-details', { restaurant: null, reviews: [] });
     }
 });
 

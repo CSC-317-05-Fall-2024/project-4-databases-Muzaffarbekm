@@ -1,84 +1,66 @@
 // data/restaurants.js
-
-const restaurantData = [
-    {
-        id: 0,
-        name: "The Fish Express",
-        phone: "(808) 245-9918",
-        address: "3343 Kuhio Hwy, Lihue, HI 96766",
-        photo: "/images/fish-express.png"
-    },
-    {
-        id: 1,
-        name: "Hanalei Dolphin Restaurant",
-        phone: "(808) 826-6113",
-        address: "5-5016 Kuhio Hwy, Hanalei, HI 96714",
-        photo: "/images/hanalei-market.jpg"
-    },
-    {
-        id: 2,
-        name: "Keoki's Paradise",
-        phone: "(808) 742-7534",
-        address: "2360 Kiahuna Plantation Dr, Koloa, HI 96756",
-        photo: "/images/keokis-paradise-exterior.jpg"
-    },
-    {
-        id: 3,
-        name: "Beach House Restaurant",
-        phone: "(808) 742-1424",
-        address: "5022 Lawai Rd, Koloa, HI 96756",
-        photo: "/images/beach-house.jpg"
-    },
-    {
-        id: 4,
-        name: "Hukilau Lanai",
-        phone: "(808) 822-0600",
-        address: "520 Aleka Loop, Kapaa, HI 96746",
-        photo: "/images/hukilau-lanai.jpg"
-    },
-    {
-        id: 5,
-        name: "Kalypso Island Bar & Grill",
-        phone: "(808) 826-9700",
-        address: "5-5156 Kuhio Hwy, Hanalei, HI 96714",
-        photo: "/images/kalypso.jpeg"
-    }
-];
-
-let lastId = restaurantData.length - 1; // Adjusted to match the highest current ID
-
-const getNextId = () => {
-    lastId += 1;
-    return lastId;
-};
+import { pool } from '../config/database.js';
 
 // Get a list of restaurants
-const getRestaurants = () => {
-    return restaurantData;
+const getRestaurants = async () => {
+    try {
+        const result = await pool.query('SELECT * FROM restaurants ORDER BY id');
+        return result.rows;
+    } catch (error) {
+        console.error('Error getting restaurants:', error);
+        throw error;
+    }
 };
 
 // Get a restaurant by id
-const getRestaurant = (id) => {
-    return restaurantData.find(restaurant => restaurant.id === parseInt(id));
+const getRestaurant = async (id) => {
+    try {
+        const result = await pool.query('SELECT * FROM restaurants WHERE id = $1', [id]);
+        return result.rows[0]; // Return first match or undefined if not found
+    } catch (error) {
+        console.error('Error getting restaurant:', error);
+        throw error;
+    }
 };
 
 // Create a new restaurant entry
-const createRestaurant = (newRestaurant) => {
-    console.log('New Restaurant:', newRestaurant);
-    const id = getNextId();
-    const restaurant = { id, ...newRestaurant };
-    restaurantData.push(restaurant);
-    return restaurant;
+const createRestaurant = async (newRestaurant) => {
+    try {
+        const { name, phone, address, photo } = newRestaurant;
+        const result = await pool.query(
+            'INSERT INTO restaurants (name, phone, address, photo) VALUES ($1, $2, $3, $4) RETURNING *',
+            [name, phone, address, photo]
+        );
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error creating restaurant:', error);
+        throw error;
+    }
 };
 
 // Delete a restaurant by id
-const deleteRestaurant = (id) => {
-    const index = restaurantData.findIndex(restaurant => restaurant.id === parseInt(id));
-    if (index !== -1) {
-        restaurantData.splice(index, 1);
-        return true; // Successfully deleted
+const deleteRestaurant = async (id) => {
+    try {
+        const result = await pool.query('DELETE FROM restaurants WHERE id = $1 RETURNING *', [id]);
+        return result.rowCount > 0; // Returns true if a row was deleted, false if no match found
+    } catch (error) {
+        console.error('Error deleting restaurant:', error);
+        throw error;
     }
-    return false; // Restaurant not found
 };
 
-export { getRestaurants, getRestaurant, createRestaurant, deleteRestaurant };
+// Get reviews for a specific restaurant
+const getReviewsForRestaurant = async (id) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM reviews WHERE restaurant_id = $1 ORDER BY id',
+            [id]
+        );
+        return result.rows;
+    } catch (error) {
+        console.error('Error getting reviews for restaurant:', error);
+        throw error;
+    }
+};
+
+export { getRestaurants, getRestaurant, createRestaurant, deleteRestaurant, getReviewsForRestaurant };
